@@ -27,7 +27,7 @@
         return samples;
     }
 
-    public static float Fitness(PartitionPool partitionPool, List<Sample> testSamples)
+    public static float Fitness(RegionPool partitionPool, List<Sample> testSamples)
     {
         int correct = 0;
         foreach (Sample testSample in testSamples)
@@ -50,21 +50,43 @@
         int totalClasses = 10;
         int totalDimensions = mnistTrain[0].input.Count;
 
-
-        using TextWriter tw = new StreamWriter("results.csv", false);
-        tw.WriteLine("dimensionCount,partitionCount,fitness");
-
-        for (int dimensionCount = 1; dimensionCount <= totalDimensions; dimensionCount++)
+        List<int> redundantDimensions = new List<int>();
+        for (int i = 0; i < totalDimensions; i++)
         {
-            PartitionPool partitionPool = new PartitionPool(totalClasses, totalDimensions, dimensionCount);
-            for (int partitionCount = 1; partitionCount < 1000; partitionCount++)
+            bool redundant = true;
+            for (int j = 1; j < mnistTrain.Count; j++)
             {
-                partitionPool.AddPartition(mnistTrain);
-                float fitness = Fitness(partitionPool, mnistTest);
-                tw.WriteLine($"{dimensionCount},{partitionCount},{fitness}");
-                Console.Write($"\rd: {dimensionCount}, p: {partitionCount}, f: {fitness}            ");
+                if (mnistTrain[j].input[i] != mnistTrain[0].input[i])
+                {
+                    redundant = false;
+                    break;
+                }
+            }
+            if (redundant)
+            {
+                redundantDimensions.Add(i);
             }
         }
+
+        using TextWriter tw = new StreamWriter("results.csv", false);
+        tw.WriteLine("dimensionPerRegion,regionCount,fitness");
+        object writeLock = new object();
+
+        Parallel.For(1, totalDimensions, i =>
+        {
+            int dimensionsPerRegion = i;
+            RegionPool regionPool = new RegionPool(totalClasses, totalDimensions, dimensionsPerRegion, mnistTrain);
+            for (int regionCount = 1; regionCount < 1000; regionCount++)
+            {
+                regionPool.AddRegion(mnistTrain);
+                float fitness = Fitness(regionPool, mnistTest);
+                lock (writeLock)
+                {
+                    tw.WriteLine($"{dimensionsPerRegion},{regionCount},{fitness}");
+                    Console.Write($"\rd: {dimensionsPerRegion}, r: {regionCount}, f: {fitness}            ");
+                }
+            }
+        });
     }
 }
 
