@@ -27,12 +27,12 @@
         return samples;
     }
 
-    public static float Fitness(RegionPool partitionPool, List<Sample> testSamples)
+    public static float Fitness(HyperPlanePool hyperPlanePool, List<Sample> testSamples)
     {
         int correct = 0;
         foreach (Sample testSample in testSamples)
         {
-            int prediction = partitionPool.Predict(testSample.input);
+            int prediction = hyperPlanePool.Predict(testSample.input);
             if (prediction == testSample.output)
             {
                 correct++;
@@ -69,21 +69,21 @@
         }
 
         using TextWriter tw = new StreamWriter("results.csv", false);
-        tw.WriteLine("dimensionPerRegion,regionCount,fitness");
+        tw.WriteLine("dimensionPerPlane,hyperPlanes,fitness");
         object writeLock = new object();
 
         Parallel.For(1, totalDimensions, i =>
         {
-            int dimensionsPerRegion = i;
-            RegionPool regionPool = new RegionPool(totalClasses, totalDimensions, dimensionsPerRegion, mnistTrain);
-            for (int regionCount = 1; regionCount < 1000; regionCount++)
+            int dimensionsPerPlane = i;
+            HyperPlanePool hyperPlanePool = new HyperPlanePool(totalClasses, totalDimensions, dimensionsPerPlane, mnistTrain);
+            for (int hyperPlaneCount = 1; hyperPlaneCount < 100; hyperPlaneCount++)
             {
-                regionPool.AddRegion(mnistTrain);
-                float fitness = Fitness(regionPool, mnistTest);
+                hyperPlanePool.AddHyperPlane(mnistTrain);
+                float fitness = Fitness(hyperPlanePool, mnistTest);
                 lock (writeLock)
                 {
-                    tw.WriteLine($"{dimensionsPerRegion},{regionCount},{fitness}");
-                    Console.Write($"\rd: {dimensionsPerRegion}, r: {regionCount}, f: {fitness}            ");
+                    tw.WriteLine($"{dimensionsPerPlane},{hyperPlaneCount},{fitness}");
+                    Console.Write($"\rd: {dimensionsPerPlane}, h: {hyperPlaneCount}, f: {fitness}            ");
                 }
             }
         });
